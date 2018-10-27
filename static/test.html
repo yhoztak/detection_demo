@@ -1,0 +1,91 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Intro to FeatureLayer - 4.9</title>
+
+  <link rel="stylesheet" href="https://js.arcgis.com/4.9/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.9/"></script>
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+
+  <script>
+    require([
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/layers/ImageryLayer",
+        "esri/geometry/support/webMercatorUtils", 
+        "esri/config"
+      ],
+      function(
+        Map, MapView,
+        FeatureLayer,ImageryLayer,webMercatorUtils
+      ) {
+
+        var map = new Map({
+          basemap: "gray"
+        });
+
+        var view = new MapView({
+          center: [ -160.109, 21.827],
+          zoom: 15,
+          container: "viewDiv",
+          map: map
+        });
+
+        /********************
+         * Add feature layer
+         ********************/
+        // esri.config.defaults.io.proxyurl="testgis.dev.com"
+        
+        // esriConfig.defaults.io.corsEnabledServers.push("testgis.dev.com"); 
+        // esri.config.defaults.io.corsEnabledServers.push("hawaii-marine-debris.s3.amazonaws.com")
+
+        // // Carbon storage of trees in Warren Wilson College.
+        var debrisSegmentLayer = new FeatureLayer({url: "https://services6.arcgis.com/6upcS4765C9NvQr1/arcgis/rest/services/niihau_segments_debris_count/FeatureServer",
+        opacity: 0.75});
+        map.add(debrisSegmentLayer);
+
+        /********************
+         * Add Imagery layer
+         ********************/
+        var hawaii_image_layer = new ImageryLayer({url: "https://geodata.hawaii.gov/arcgis/rest/services/SoH_Imagery/Coastal_2015/ImageServer",
+          opacity: 0.75});
+        map.add(hawaii_image_layer);
+
+        map.on("load", function() {
+          //after map loads, connect to listen to mouse move & drag events
+          map.on("mouse-move", showCoordinates);
+          map.on("mouse-drag", showCoordinates);
+        });
+
+        function showCoordinates(evt) {
+          //the map is in web mercator but display coordinates in geographic (lat, long)
+          var mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint);
+          //display mouse coordinates
+          dom.byId("info").innerHTML = mp.x.toFixed(10) + ", " + mp.y.toFixed(10);
+        }
+
+
+      });
+  </script>
+</head>
+
+<body>
+  <div id="viewDiv" style="position:relative; width:1200px; height:900px; border:1px solid #000;"></div>
+  <div>
+      <span id="info" style="position:absolute; left:15px; bottom:5px; color:#000; z-index:50;"></span>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no"/>
+    <title>CSVLayer sample</title>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.26/esri/css/esri.css">
+    <style>
+      html, body, #map {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background-color: #FFF;
+        overflow: hidden;
+        font-family: "Trebuchet MS";
+      }
+    </style>
+    
+    <script src="https://js.arcgis.com/3.26/"></script>
+    <script> 
+      var map, csv;
+      require([
+        "esri/map", 
+        "esri/layers/CSVLayer",
+        "esri/Color",
+        "esri/symbols/SimpleMarkerSymbol",
+        "esri/renderers/SimpleRenderer",
+        "esri/InfoTemplate",
+        "esri/config",
+         "esri/geometry/webMercatorUtils", 
+         "esri/layers/ArcGISImageServiceLayer", 
+        "esri/layers/ImageServiceParameters", 
+        "dojo/parser",
+         "dojo/dom", 
+        "dojo/domReady!"
+      ], function(
+        Map, CSVLayer, Color, SimpleMarkerSymbol, SimpleRenderer, InfoTemplate, esriConfig,webMercatorUtils, 
+        ArcGISImageServiceLayer, 
+        ImageServiceParameters, parser,dom
+      ) {
+        esriConfig.defaults.io.corsEnabledServers.push("testgis.dev.com"); 
+        esri.config.defaults.io.corsEnabledServers.push("hawaii-marine-debris.s3.amazonaws.com")
+        
+        esri.config.defaults.io.proxyurl="testgis.dev.com"
+        
+
+        // map = new Map("map", {
+        //   basemap: "streets",
+        //   center: [-160.109, 21.827],
+        //   zoom: 12
+        // });
+        map = new Map("map", {
+          basemap: "streets",
+          center: [ -160.109, 21.827],
+          zoom: 12
+        });
+
+        
+        csv = new CSVLayer("http://hawaii-marine-debris.s3.amazonaws.com/niihau/map/debris_lat_long_coordinates.csv", {
+          copyright: "Mapping Marine Debris",
+          elevationInfo: {
+             mode: "on-the-ground"
+          }
+        });
+        csv.renderer = {
+          type: "simple",  // autocasts as new SimpleRenderer()
+          symbol: {
+            type: "point-3d",  // autocasts as new PointSymbol3D()
+            symbolLayers: [{
+              type: "icon",  // autocasts as new IconSymbol3DLayer()
+              material: { color: [238, 69, 0, 0.75] },
+              outline: {
+                width: 0.5,
+                color: "white"
+              },
+              size: "12px"
+            }]
+          }
+          };
+        // csv = new CSVLayer("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.csv", {
+        //   copyright: "USGS.gov"
+        // });
+
+        var orangeRed = new Color([238, 69, 0, 0.5]); // hex is #ff4500
+        var marker = new SimpleMarkerSymbol("solid", 10, null, orangeRed);
+        var renderer = new SimpleRenderer(marker);
+        csv.setRenderer(renderer);
+        var template = new InfoTemplate("${type}", "${place}");
+        csv.setInfoTemplate(template);
+        map.addLayer(csv);
+
+        
+
+        var params = new ImageServiceParameters();
+        params.noData = 0;
+        var imageServiceLayer = new ArcGISImageServiceLayer(" https://geodata.hawaii.gov/arcgis/rest/services/SoH_Imagery/Coastal_2015/ImageServer", {
+          imageServiceParameters: params,
+          opacity: 0.75
+        });
+        map.addLayer(imageServiceLayer);
+        // example lat long: -160.1793628159, 21.8342278972
+
+        map.on("load", function() {
+          //after map loads, connect to listen to mouse move & drag events
+          map.on("mouse-move", showCoordinates);
+          map.on("mouse-drag", showCoordinates);
+        });
+
+        function showCoordinates(evt) {
+          //the map is in web mercator but display coordinates in geographic (lat, long)
+          var mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint);
+          //display mouse coordinates
+          dom.byId("info").innerHTML = mp.x.toFixed(10) + ", " + mp.y.toFixed(10);
+        }
+
+
+      });
+    </script>
+  </head>
+  <body>
+    <div id="map" style="position:relative; width:900px; height:600px; border:1px solid #000;">
+      
+    </div>
+    <div>
+      <span id="info" style="position:absolute; left:15px; bottom:5px; color:#000; z-index:50;"></span>
+    </div>
+  </body>
+</html>
