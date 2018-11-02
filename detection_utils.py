@@ -78,7 +78,7 @@ def detect_objects(image):
 
 def detect_marine_objects(image_path):
     objects_points_detected_so_far = []
-     print("Preprocessing")
+    print("Preprocessing")
     image = Image.open(image_path).convert('RGB')
     image_array = im_to_im_array(image)
     preprocessed_image = preprocess_image(image_array)
