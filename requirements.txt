@@ -13,11 +13,6 @@ grpcio==1.16.0
 h5py==2.8.0
 html5lib==0.9999999
 numpy==1.15.2
-Keras==2.2.2
-Keras-Applications==1.0.6
-Keras-Preprocessing==1.0.5
-keras-resnet==0.1.0
-keras-retinanet==0.4.1
 Markdown==3.0.1
 MarkupSafe==1.0
 more-itertools==4.3.0
@@ -35,10 +30,6 @@ requests>=2.20.0
 scipy==1.1.0
 six==1.11.0
 tensorboard==1.11.0
-tensorflow==1.5.0
-tensorflow-hub==0.1.1
-tensorflow-tensorboard==0.4.0
-tensorflowjs==0.6.4
 termcolor==1.1.0
 urllib3==1.23
 Werkzeug==0.14.1
