@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Object Detection API</title>
+    <link rel='shortcut icon' href='favicon.ico'/>
+     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="css/custom.css">
+    <link class="jsbin" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1/themes/base/jquery-ui.css" rel="stylesheet" type="text/css" />
+    <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>
+    <script class="jsbin" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.0/jquery-ui.min.js"></script>
+    <meta charset=utf-8 />
+
+    <script language="javascript" type="text/javascript">
+      function ChangePhoto(name, img) {
+        img = typeof img !== 'undefined' ? img : "{{ result['original'] }}";
+        target = document.getElementById("label");
+        target.innerHTML = name;
+        target = document.getElementById("photo");
+        target.src = img;
+      }
+
+      function WaitDisplay() {
+        target = document.getElementById("result");
+        target.style.display="none";
+        target = document.getElementById("loading");
+        target.style.display="";
+        setTimeout(function() {
+          document.getElementById("upload").submit();}, 100);
+        }
+    </script>
+
+  </head>
+  <body>
+
+    {% from "_formhelpers.html" import render_field %}
+
+    <h1>Marine Debris Detection </h1>
+    <h3>Upload a photo</h3>
+    <div>
+      <form id="upload" method=post action={{ url_for('post') }} enctype="multipart/form-data">
+        {{ render_field(photo_form.input_photo) }}
+        <p><input type="button" onclick="WaitDisplay();" value="Upload"></p>
+      </form>
+    </div>
+
+    <hr>
+
+    <div id="result" class="col-lg-10">
+
+      {% if result|length > 0 %}
+        <div id="label"></div>
+        <div class="col-lg-6">
+          <img id="photo" src="{{ result['all'] }}" style="width:500px;" align="left" hspace="10" vspace="10">
+        </div>
+
+        <div class="col-lg-2">
+              <table id="table" class="table table-striped" style="display: block;">
+          <tr><td><b>Filter</b></td>
+                    <td><b>Count</b></td></tr>
+
+          <tr><td>
+            <a href="javascript:void(0);" onclick="ChangePhoto('all', '{{ result[ "all" ] }}');">All</a>
+          </td><td>{{result['summary']['all'] }}</td></tr>
+
+          {% for name, img in result.items() %}
+            {% if name != 'original' and name!='all' and name!='summary' %}
+              <tr><td>
+                <a href="javascript:void(0);"
+                   onclick="ChangePhoto('{{ name }}', '{{ result[ name ] }}');">{{ name }} </a>
+              </td><td>{{result['summary'][name] }}</td>
+                
+              </tr>
+            {% endif %}
+          {% endfor %}
+          <tr><td>
+            <a href="javascript:void(0);" onclick="ChangePhoto('original');">Original</a>
+           </td><td></td></tr>
+        </div>
+      {% endif %}
+    </div>
+    <div id="loading" style="display:none">
+      <h2>Detecting Objects...</h2>
+    </div>
+
+  </body>
+</html>
