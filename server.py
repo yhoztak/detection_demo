@@ -1,18 +1,15 @@
 from keras.applications import inception_v3,imagenet_utils
 from keras_retinanet import models
-from keras_retinanet.utils.image import read_image_bgr, preprocess_image, resize_image
-from keras_retinanet.utils.visualization import draw_box, draw_caption
 from keras_retinanet.utils.colors import label_color
 import cv2 
 import numpy as np
-from flask import Flask, request, make_response,jsonify
 import numpy as np
 import json
 import urllib.request
 from urllib.request import Request, urlopen
 import base64
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask import Flask, request, make_response,jsonify, render_template, request, redirect, url_for, send_from_directory
 import logging
 import urllib.request
 from io import BytesIO
@@ -32,7 +29,6 @@ import tempfile
 from detection_utils import *
 from io import StringIO
 
-model = None
 app = Flask(__name__,static_url_path='')
 CORS(app)
 version = "v3"
