@@ -1,0 +1,1 @@
+Need to install keras and tensorflow manually. didn't put it in requirements.txt in case any customization is needed based on your OS
