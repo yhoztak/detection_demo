@@ -19,6 +19,18 @@ from io import BytesIO
 from PIL import Image
 import pandas as pd
 from flask_cors import CORS
+from wtforms import Form
+from wtforms import ValidationError
+from flask_wtf.file import FileField
+from PIL import ImageDraw
+from werkzeug.datastructures import CombinedMultiDict
+from wtforms import Form
+from os import path
+basepath = path.dirname(__file__)
+import sys
+import tempfile
+from detection_utils import *
+from io import StringIO
 
 model = None
 app = Flask(__name__,static_url_path='')
@@ -32,75 +44,11 @@ label_lookup
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
-def preprocess_img(img,target_size=(299,299)):
-    if (img.shape[2] == 4):
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)    
-    img = cv2.resize(img,target_size)
-    img = np.divide(img,255.)
-    img = np.subtract(img,0.5)
-    img = np.multiply(img,2.)
-    return img
-
-def load_im_from_url(url):
-    requested_url = urlopen(Request(url,headers={'User-Agent': 'Mozilla/5.0'})) 
-    image_array = np.asarray(bytearray(requested_url.read()), dtype=np.uint8)
-    print (image_array.shape)
-    print (image_array)
-    image_array = cv2.imdecode(image_array, -1)
-    print (image_array.shape)
-    return image_array
-
-def load_im_from_system(url):
-    image_url = url.split(',')[1]
-    image_url = image_url.replace(" ", "+")
-    image_array = base64.b64decode(image_url)
-    im = Image.open(BytesIO(image_array))
-    image = np.asarray(im.convert('RGB'))
-    return image[:, :, ::-1].copy()
-
-def predict(img):
-    img=preprocess_img(img)
-    # print (img.shape)
-    global model
-    if model is None:
-        # model =inception_v3.InceptionV3()
-        # model.compile(optimizer='adam', loss='categorical_crossentropy')
-        model_path = "/tmp/debris_model_v3_10_6.h5"
-        model = models.load_model(model_path, backbone_name='resnet50')
-
-    preds = model.predict_on_batch(np.array([img]))
-    return imagenet_utils.decode_predictions(preds)
-
-
-def detect_objects(image):
-    detected_objects = []
-    image = preprocess_image(image)
-    global model
-    if model is None:
-        model_path = "/tmp/debris_model_v3_10_6.h5"
-        model = models.load_model(model_path, backbone_name='resnet50')
-
-    boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))
-    detected_label =set()
-    for box, score, label in zip(boxes[0], scores[0], labels[0]):
-        #only shows the highest confidence box
-        if label in detected_label:
-            continue
-        detected_label.add(label)
-        if score < 0.15:
-            break
-        color = label_color(label)
-        b = box.astype(int)
-        detected_objects.append({'x1':b[0], 'y1':b[1], 'x2': b[2], 'y2':b[3],'label':label, 'label_name': label_lookup[label], 'score':float(score)})
-    return detected_objects
-
-def load_image_from_url(url):
-    with urllib.request.urlopen(url) as url:
-        f = BytesIO(url.read())
-        image = np.asarray(Image.open(f).convert('RGB'))
-        return  image[:, :, ::-1].copy()
-    return None
-
+class PhotoForm(Form):
+  input_photo = FileField(
+      'File extension should be: %s (case-insensitive)' % ', '.join(extensions),
+      validators=[is_image()])
+  
 @app.route('/classify_system', methods=['GET'])
 def classify_system():
     image_url = request.args.get('imageurl')
@@ -143,11 +91,27 @@ def test():
 def tf():
     return app.send_static_file('tf.html')
 
+@app.route('/')
+def upload():
+  photo_form = PhotoForm(request.form)
+  return render_template('upload.html', photo_form=photo_form, result={})
 
-@app.route('/', methods=['GET'])
-def root():
-    return app.send_static_file('index.html')
+@app.route('/post', methods=['GET', 'POST'])
+def post():
+  form = PhotoForm(CombinedMultiDict((request.files, request.form)))
+  if request.method == 'POST' and form.validate():
+    with tempfile.NamedTemporaryFile() as temp:
+      form.input_photo.data.save(temp)
+      temp.flush()
+      result = detect_marine_objects(temp.name)
+
+    photo_form = PhotoForm(request.form)
+    return render_template('upload.html',
+                           photo_form=photo_form, result=result)
+  else:
+    return redirect(url_for('upload'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
 
+# debris image URL to try : https://3c1703fe8d.site.internapcdn.net/newman/csz/news/800/2018/esatestingde.jpg
