@@ -91,7 +91,7 @@ def detect_objects(image):
     return detected_objects
 
 def backup_to_s3(image_path):
-    ts = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    ts = datetime.now().strftime("%Y-%m-%d-%H")
     filename= path.basename(image_path).lower().replace(" ", "_")
     extension ="jpg" #guess for now
 
@@ -143,12 +143,18 @@ def detect_marine_objects(image_path):
 
     result['all'] = encode_image(all_obj_image)
     result['summary'] = {}
+    result['color'] = {}
+
     for cls, new_image in new_images.items():
       category = label_lookup[cls]
       result[category] = encode_image(new_image)
       result['summary'][category] = debris_count[cls]
-    
+      result['color'][category] = tuple(label_color(cls))
+
     result['summary']['all'] = sum(debris_count.values())
+    # import pdb;pdb.set_trace()
+    #                 <td><hr style="height:1px;border-top:1px solid {{'#%02x%02x%02x' % result['color']['Buoys'] }}" /></td>
+
 #also calculate total number of debris, and counts by type of debris
     return result
 # =================== Image related =========================

@@ -16,8 +16,8 @@
     <script language="javascript" type="text/javascript">
       function ChangePhoto(name, img) {
         img = typeof img !== 'undefined' ? img : "{{ result['original'] }}";
-        target = document.getElementById("label");
-        target.innerHTML = name;
+        // target = document.getElementById("label");
+        // target.innerHTML = name;
         target = document.getElementById("photo");
         target.src = img;
       }
@@ -59,26 +59,27 @@
         <div class="col-lg-2">
               <table id="table" class="table table-striped" style="display: block;">
           <tr><td><b>Filter</b></td>
-                    <td><b>Count</b></td></tr>
-
+                    <td><b>Count</b></td>
+                    <td><b>Color</b></td></tr>
           <tr><td>
             <a href="javascript:void(0);" onclick="ChangePhoto('all', '{{ result[ "all" ] }}');">All</a>
           </td><td>{{result['summary']['all'] }}</td></tr>
 
           {% for name, img in result.items() %}
-            {% if name != 'original' and name!='all' and name!='summary' %}
+            {% if name not in ['original', 'all', 'summary', 'color'] %}
               <tr><td>
                 <a href="javascript:void(0);"
                    onclick="ChangePhoto('{{ name }}', '{{ result[ name ] }}');">{{ name }} </a>
-              </td><td>{{result['summary'][name] }}</td>
-                
+              </td>
+                 <td>{{result['summary'][name] }}</td>
+                 <td><hr style="height:2px;margin-top:10px;margin-bottom-5px;border-top:2px solid {{'#%02x%02x%02x' % result['color'][name] }}" /></td>
               </tr>
             {% endif %}
           {% endfor %}
-          <tr><td>
-            <a href="javascript:void(0);" onclick="ChangePhoto('original');">Original</a>
-           </td><td></td></tr>
+          
         </div>
+
+<!--         <a href="javascript:void(0);" onclick="ChangePhoto('original');">Original</a>-->
       {% endif %}
     </div>
     <div id="loading" style="display:none">
