@@ -22,7 +22,9 @@ import sys
 import tempfile
 from urllib.request import Request, urlopen
 from io import StringIO
-
+from datetime import datetime
+import os 
+import boto3
 content_types = {'jpg': 'image/jpeg',
                  'jpeg': 'image/jpeg',
                  'png': 'image/png'}
@@ -37,6 +39,19 @@ label_df = pd.read_csv(label_path,names=['label','id'])
 label_df
 label_lookup = label_df.set_index('id').T.to_dict('records')[0]
 label_lookup 
+
+
+if 'heroku' in os.environ and os.environ['heroku']:
+  s3_client = boto3.client('s3', aws_access_key_id=os.environ['S3_KEY'], aws_secret_access_key=os.environ['S3_secret'])
+  s3_resource = boto3.resource('s3', aws_access_key_id=os.environ['S3_KEY'], aws_secret_access_key=os.environ['S3_secret'])
+else:
+  boto3.setup_default_session(profile_name='hawaii')
+  s3_client = boto3.client('s3')
+  s3_resource = boto3.resource('s3')
+
+bucket_name = 'hawaii-marine-debris'
+version='v3'
+
 def load_label_lookup():
     label_path = "/tmp/labels_{}.csv".format(version)
     label_df = pd.read_csv(label_path,names=['label','id'])
@@ -75,9 +90,21 @@ def detect_objects(image):
         detected_objects.append({'x1':b[0], 'y1':b[1], 'x2': b[2], 'y2':b[3],'label':label, 'label_name': label_lookup[label], 'score':float(score)})
     return detected_objects
 
+def backup_to_s3(image_path):
+    ts = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    filename= path.basename(image_path).lower().replace(" ", "_")
+    extension ="jpg" #guess for now
+
+    s3_filepath = "images/from_app/external/{}_{}.{}".format(filename, ts,extension)
+    
+
+    s3_client.upload_file(image_path, bucket_name, s3_filepath)
+
 def detect_marine_objects(image_path):
     objects_points_detected_so_far = []
 
+    backup_to_s3(image_path)
+    print("backed up image")
     image = Image.open(image_path).convert('RGB')
     image_array = im_to_im_array(image)
     preprocessed_image = preprocess_image(image_array)
