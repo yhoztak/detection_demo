@@ -1,46 +1,34 @@
-
-import keras
-from keras.utils import get_file
+from keras.applications import inception_v3,imagenet_utils
 from keras_retinanet import models
-
-# import keras_retinanet
-from keras_retinanet import models
-from keras_retinanet.utils.image import preprocess_image
+from keras_retinanet.utils.image import read_image_bgr, preprocess_image, resize_image
+from keras_retinanet.utils.visualization import draw_box, draw_caption
 from keras_retinanet.utils.colors import label_color
-# import miscellaneous modules
-import cv2
-import os
+import cv2 
 import numpy as np
-import time
-from keras.backend import clear_session
-
-# set tf backend to allow memory to grow, instead of claiming everything
-import tensorflow as tf
-
-def get_session():
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = True
-    return tf.Session(config=config)
-# keras.backend.tensorflow_backend.set_session(get_session())
-
 import json
 import base64
 import logging
 import urllib.request
-from io import BytesIO,StringIO
+from io import BytesIO
 from PIL import Image, ImageDraw
 import pandas as pd
+from wtforms import Form
+from wtforms import ValidationError
+from flask_wtf.file import FileField
+from werkzeug.datastructures import CombinedMultiDict
+from wtforms import Form
 from os import path
 import sys
 import tempfile
+from urllib.request import Request, urlopen
+from io import StringIO
 
 content_types = {'jpg': 'image/jpeg',
                  'jpeg': 'image/jpeg',
                  'png': 'image/png'}
 extensions = sorted(content_types.keys())
 
-model_path = "/tmp/debris_model_v3_10_6.h5"
-model = models.load_model(model_path, backbone_name='resnet50')
+model = None
 
 #+=================== Model related =========================
 version = 'v3'
@@ -49,8 +37,6 @@ label_df = pd.read_csv(label_path,names=['label','id'])
 label_df
 label_lookup = label_df.set_index('id').T.to_dict('records')[0]
 label_lookup 
-clear_session()
-
 def load_label_lookup():
     label_path = "/tmp/labels_{}.csv".format(version)
     label_df = pd.read_csv(label_path,names=['label','id'])
@@ -65,31 +51,7 @@ def load_debris_model():
         model_path = "/tmp/debris_model_v3_10_6.h5"
         model = models.load_model(model_path, backbone_name='resnet50')
     return model
-    
-def preprocess_image(x, mode='caffe'):
-    """ Preprocess an image by subtracting the ImageNet mean.
-    Args
-        x: np.array of shape (None, None, 3) or (3, None, None).
-        mode: One of "caffe" or "tf".
-            - caffe: will zero-center each color channel with
-                respect to the ImageNet dataset, without scaling.
-            - tf: will scale pixels between -1 and 1, sample-wise.
-    Returns
-        The input with the ImageNet mean subtracted.
-    """
-    # mostly identical to "https://github.com/keras-team/keras-applications/blob/master/keras_applications/imagenet_utils.py"
-    # except for converting RGB -> BGR since we assume BGR already
-    x = x.astype(keras.backend.floatx())
-    if mode == 'tf':
-        x /= 127.5
-        x -= 1.
-    elif mode == 'caffe':
-        x[..., 0] -= 103.939
-        x[..., 1] -= 116.779
-        x[..., 2] -= 123.68
-
-    return x
-
+        
 
 #just to get labels
 def detect_objects(image):
@@ -115,21 +77,19 @@ def detect_objects(image):
 
 def detect_marine_objects(image_path):
     objects_points_detected_so_far = []
-    print("Preprocessing")
+
     image = Image.open(image_path).convert('RGB')
     image_array = im_to_im_array(image)
     preprocessed_image = preprocess_image(image_array)
     model = load_debris_model()
-    print("Predict...")
     boxes, scores, labels = model.predict_on_batch(np.expand_dims(preprocessed_image, axis=0))
     # image.thumbnail((480, 480), Image.ANTIALIAS)
-    print("Received detection result")
     result = {}
     new_images = {}
     debris_count = {}
     result['original'] = encode_image(image.copy())
     all_obj_image = image.copy()
-    print("Going through each debris")
+
     for box, score, label in zip(boxes[0], scores[0], labels[0]):
         if score < 0.15: continue
         color = tuple(label_color(label))
@@ -167,23 +127,23 @@ def detect_marine_objects(image_path):
 # =================== Image related =========================
 
 
-# def preprocess_img(img,target_size=(300,300)):
-#     if (img.shape[2] == 4):
-#         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)    
-#     img = cv2.resize(img,target_size)
-#     img = np.divide(img,255.)
-#     img = np.subtract(img,0.5)
-#     img = np.multiply(img,2.)
-#     return img
+def preprocess_img(img,target_size=(600,600)):
+    if (img.shape[2] == 4):
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)    
+    img = cv2.resize(img,target_size)
+    img = np.divide(img,255.)
+    img = np.subtract(img,0.5)
+    img = np.multiply(img,2.)
+    return img
 
-# def load_im_from_url(url):
-#     requested_url = urlopen(Request(url,headers={'User-Agent': 'Mozilla/5.0'})) 
-#     image_array = np.asarray(bytearray(requested_url.read()), dtype=np.uint8)
-#     print (image_array.shape)
-#     print (image_array)
-#     image_array = cv2.imdecode(image_array, -1)
-#     print (image_array.shape)
-#     return image_array
+def load_im_from_url(url):
+    requested_url = urlopen(Request(url,headers={'User-Agent': 'Mozilla/5.0'})) 
+    image_array = np.asarray(bytearray(requested_url.read()), dtype=np.uint8)
+    print (image_array.shape)
+    print (image_array)
+    image_array = cv2.imdecode(image_array, -1)
+    print (image_array.shape)
+    return image_array
 
 def load_im_from_system(url):
     image_url = url.split(',')[1]
@@ -193,18 +153,18 @@ def load_im_from_system(url):
     image = np.asarray(im.convert('RGB'))
     return image[:, :, ::-1].copy()
 
-# def predict(img):
-#     img=preprocess_img(img)
-#     # print (img.shape)
-#     global model
-#     if model is None:
-#         # model =inception_v3.InceptionV3()
-#         # model.compile(optimizer='adam', loss='categorical_crossentropy')
-#         model_path = "/tmp/debris_model_v3_10_6.h5"
-#         model = models.load_model(model_path, backbone_name='resnet50')
+def predict(img):
+    img=preprocess_img(img)
+    # print (img.shape)
+    global model
+    if model is None:
+        # model =inception_v3.InceptionV3()
+        # model.compile(optimizer='adam', loss='categorical_crossentropy')
+        model_path = "/tmp/debris_model_v3_10_6.h5"
+        model = models.load_model(model_path, backbone_name='resnet50')
 
-#     preds = model.predict_on_batch(np.array([img]))
-#     return imagenet_utils.decode_predictions(preds)
+    preds = model.predict_on_batch(np.array([img]))
+    return imagenet_utils.decode_predictions(preds)
 
 def load_image_from_url(url):
     with urllib.request.urlopen(url) as url:
