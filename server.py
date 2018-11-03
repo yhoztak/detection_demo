@@ -1,25 +1,15 @@
-from keras.applications import inception_v3,imagenet_utils
-from keras_retinanet import models
-from keras_retinanet.utils.colors import label_color
-import cv2 
-import numpy as np
-import numpy as np
+from flask import Flask, request, make_response,jsonify, render_template, request, redirect, url_for, send_from_directory
 import json
 import urllib.request
 from urllib.request import Request, urlopen
 import base64
-import numpy as np
-from flask import Flask, request, make_response,jsonify, render_template, request, redirect, url_for, send_from_directory
 import logging
-import urllib.request
 from io import BytesIO
-from PIL import Image
 import pandas as pd
 from flask_cors import CORS
 from wtforms import Form
 from wtforms import ValidationError
 from flask_wtf.file import FileField
-from PIL import ImageDraw
 from werkzeug.datastructures import CombinedMultiDict
 from wtforms import Form
 from os import path
