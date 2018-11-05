@@ -89,7 +89,10 @@ def post():
     with tempfile.NamedTemporaryFile() as temp:
       form.input_photo.data.save(temp)
       temp.flush()
-      result = detect_marine_objects(temp.name)
+      lat = request.form['latitude']
+      lon = request.form['longtitude']
+
+      result = detect_marine_objects(temp.name, lat,lon)
 
     photo_form = PhotoForm(request.form)
     return render_template('upload.html',

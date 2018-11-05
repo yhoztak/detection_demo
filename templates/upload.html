@@ -30,6 +30,18 @@
         setTimeout(function() {
           document.getElementById("upload").submit();}, 100);
         }
+
+      function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition);
+        } else {
+            x.innerHTML = "Geolocation is not supported by this browser.";
+        }
+      }
+      function showPosition(position) {
+        $("#lat").val(position.coords.latitude)
+        $("#long").val(position.coords.longitude)
+      }
     </script>
 
   </head>
@@ -42,7 +54,14 @@
     <div>
       <form id="upload" method=post action={{ url_for('post') }} enctype="multipart/form-data">
         {{ render_field(photo_form.input_photo) }}
-        <p><input type="button" onclick="WaitDisplay();" value="Upload"></p>
+        <p><input type="button" onclick="WaitDisplay();" value="Upload">
+        <div class="col">
+        <input type="text" name="latitude" class="form-control" placeholder="Latitude">
+      </div>
+      <div class="col">
+        <input type="text" name="longtitude" class="form-control" placeholder="Longtitude">
+      </div>
+      </p>
       </form>
     </div>
 

@@ -25,6 +25,7 @@ from io import StringIO
 from datetime import datetime
 import os 
 import boto3
+import requests
 content_types = {'jpg': 'image/jpeg',
                  'jpeg': 'image/jpeg',
                  'png': 'image/png'}
@@ -96,20 +97,74 @@ def backup_to_s3(image_path):
     extension ="jpg" #guess for now
 
     s3_filepath = "images/from_app/external/{}_{}.{}".format(filename, ts,extension)
-    
 
     s3_client.upload_file(image_path, bucket_name, s3_filepath)
+    return s3_filepath
 
-def detect_marine_objects(image_path):
+def store_lat_long(s3_key, latitude,longtitude):
+    row= {
+            "image_s3_key": s3_key,
+            "lat": latitude,
+            "long":longtitude
+          }
+    req_body = {
+        "type":"insert",
+        "args":{"table":{"name":"image_debris_location","schema":"public"},
+        "objects":
+            [row],
+            "returning":["id","image_s3_key"]}}
+
+    r = requests.post('https://mapping-debris.herokuapp.com/v1/query', 
+        headers = {'user-agent': 'my-app/0.0.1',
+                    'X-Hasura-Access-Key':os.environ['HASURA_KEY']},
+        data = json.dumps(req_body))
+
+# def store_lat_long(s3_key, latitude,longtitude):
+#     query = """
+#     mutation insert_image_debris_location($input: image_debris_location_insert_input!])
+#         {
+#         insert_image_debris_location(input: $input) {
+#             id
+#         }
+#     }
+#     """
+#     graphql_query = {
+#         "query":query,
+#         "operationName": "insert_image_debris_location",
+#         "variables":json.dumps(variables)
+#     }   
+
+    # r = requests.post('https://mapping-debris.herokuapp.com/v1alpha1/graphql', 
+    #     headers = {'user-agent': 'my-app/0.0.1',
+    #                 'X-Hasura-Access-Key':os.environ['HASURA_KEY']},
+    #     data = graphql_query)
+#     return r
+
+def backup(image_path, latitude, longtitude):
+    s3_path = backup_to_s3(image_path)
+    try:
+        latitude = float(latitude)
+    except:
+        latitude= None
+    try:
+        longtitude = float(longtitude)
+    except:
+        longtitude= None
+         
+    store_lat_long(s3_path, latitude, longtitude)
+
+def detect_marine_objects(image_path, latitude, longtitude):
     objects_points_detected_so_far = []
 
-    backup_to_s3(image_path)
+    backup(image_path, latitude, longtitude)
+
     print("backed up image")
     image = Image.open(image_path).convert('RGB')
     image_array = im_to_im_array(image)
     preprocessed_image = preprocess_image(image_array)
     model = load_debris_model()
     boxes, scores, labels = model.predict_on_batch(np.expand_dims(preprocessed_image, axis=0))
+    
     # image.thumbnail((480, 480), Image.ANTIALIAS)
     result = {}
     new_images = {}
