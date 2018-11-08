@@ -10,8 +10,8 @@ from flask_cors import CORS
 from wtforms import Form
 from wtforms import ValidationError
 from flask_wtf.file import FileField
+from wtforms import StringField, DecimalField
 from werkzeug.datastructures import CombinedMultiDict
-from wtforms import Form
 from os import path
 basepath = path.dirname(__file__)
 import sys
@@ -34,6 +34,8 @@ class PhotoForm(Form):
   input_photo = FileField(
       'File extension should be: %s (case-insensitive)' % ', '.join(extensions),
       validators=[is_image()])
+  latitude = DecimalField(places=5)
+  longtitude = DecimalField(places=5)
   
 @app.route('/classify_system', methods=['GET'])
 def classify_system():
@@ -68,7 +70,7 @@ def show_url():
 def show_map():
     return app.send_static_file('map.html')
 
-@app.route('/test', methods=['GET'])
+@app.route('/density-map2', methods=['GET'])
 def test():
     return app.send_static_file('test.html')
 
@@ -96,7 +98,7 @@ def post():
 
     photo_form = PhotoForm(request.form)
     return render_template('upload.html',
-                           photo_form=photo_form, result=result)
+                           photo_form=photo_form, result=result, request=request)
   else:
     return redirect(url_for('upload'))
 

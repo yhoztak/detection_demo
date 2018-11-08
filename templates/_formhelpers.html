@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 {% macro render_field(field) %}
-  <p>{{ field.label }}</p>
   <p>{{ field(**kwargs) | safe }}</p>
   {% if field.errors %}
     <ul class=errors>

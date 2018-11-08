@@ -189,10 +189,8 @@ def detect_marine_objects(image_path, latitude, longtitude):
         else:
           debris_count[cls]+=1
 
-        draw_bounding_box_on_image(new_images[cls], box,color=color,
-                                   thickness=int(score*10)-4)
-        draw_bounding_box_on_image(all_obj_image, box,color=color,
-                                   thickness=int(score*10)-4)
+        draw_bounding_box_on_image(new_images[cls], box,color=color)
+        draw_bounding_box_on_image(all_obj_image, box,color=color)
 
         objects_points_detected_so_far.append(points)
 

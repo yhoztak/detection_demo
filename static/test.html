@@ -2,7 +2,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Intro to FeatureLayer - 4.9</title>
+  <title>Density Map</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.9/esri/css/main.css">
   <script src="https://js.arcgis.com/4.9/"></script>
@@ -25,20 +25,22 @@
         "esri/layers/FeatureLayer",
         "esri/layers/ImageryLayer",
         "esri/geometry/support/webMercatorUtils", 
-        "esri/config"
+        "esri/config",
+        "esri/widgets/Legend"
       ],
       function(
         Map, MapView,
-        FeatureLayer,ImageryLayer,webMercatorUtils
+        FeatureLayer,ImageryLayer,webMercatorUtils,
+        Legend
       ) {
 
         var map = new Map({
-          basemap: "gray"
+          basemap: "streets",
         });
 
         var view = new MapView({
           center: [ -160.109, 21.827],
-          zoom: 10,
+          zoom: 12,
           container: "viewDiv",
           map: map
         });
@@ -53,9 +55,10 @@
 
         // // Carbon storage of trees in Warren Wilson College.
         var debrisSegmentLayer = new FeatureLayer({url: "https://services6.arcgis.com/6upcS4765C9NvQr1/arcgis/rest/services/niihau_segments_debris_count/FeatureServer",
-        opacity: 0.75});
+        opacity: 0.75,legendEnabled: true});
         map.add(debrisSegmentLayer);
 
+     
         /********************
          * Add Imagery layer
          ********************/
@@ -76,7 +79,30 @@
           dom.byId("info").innerHTML = mp.x.toFixed(10) + ", " + mp.y.toFixed(10);
         }
 
+        view.when(function() {
+          var legend = new Legend({
+            view: view,
+            layerInfos: [{
+              layer: debrisSegmentLayer,
+              title: "Legend"
+            }]
+          });
 
+          view.ui.add(legend, "bottom-right");
+        });
+
+        map.on("layers-add-result", function (evt) {
+          var layerInfo = arrayUtils.map(evt.layers, function (layer, index) {
+            return {layer:layer.layer, title:layer.layer.name};
+          });
+          if (layerInfo.length > 0) {
+            var legendDijit = new Legend({
+              map: map,
+              layerInfos: layerInfo
+            }, "legendDiv");
+            legendDijit.startup();
+          }
+        });
       });
   </script>
 </head>
